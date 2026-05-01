@@ -241,6 +241,16 @@ app.delete('/api/absences/:id', async (req, res) => {
 // Chatbot endpoint
 app.post('/api/chat', async (req, res) => {
     try {
+        if (!openai) {
+            return res.json({
+                reply: {
+                    role: "assistant",
+                    content: "I am having trouble connecting to my brain because the Gemini API key is missing. Please add the GEMINI_API_KEY environment variable to Vercel and redeploy."
+                },
+                hasMutation: false
+            });
+        }
+
         const { messages, userContext } = req.body;
         
         const isLoggedIn = userContext.isLoggedIn;
