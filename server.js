@@ -20,7 +20,7 @@ app.use(express.static(__dirname));
 
 // Route for the main application (removes .html from URL)
 app.get('/', (req, res) => {
-    res.render('index');
+    res.json({ message: "BookSpace API is live!" });
 });
 
 // Initialize Supabase backend

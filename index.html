@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BookSpace Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Using Phosphor Icons for modern clean icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+</head>
+<body>
+
+    <!-- LOGIN PAGE -->
+    <div id="login-view" class="view active">
+        <div class="login-card">
+            <div class="login-header">
+                <h2>BookSpace</h2>
+                <p>Sign in to your account</p>
+            </div>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="email">Email address</label>
+                    <input type="email" id="email" value="vaibhav.godbole@fragnel.edu" required>
+                </div>
+                <!-- Dynamic Signup Fields -->
+                <div id="signup-extra-fields" style="display: none;">
+                    <div class="form-group" style="margin-bottom: 1.25rem;">
+                        <label for="fullName">Full Name</label>
+                        <input type="text" id="fullName" placeholder="e.g. Prof. Archana Lopes">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 1.25rem;">
+                        <label for="confirmPassword">Confirm Password</label>
+                        <input type="password" id="confirmPassword" placeholder="Confirm your password">
+                    </div>
+                </div>
+                <div class="form-group" id="password-group">
+                    <label id="password-label" for="password">Password</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="password" value="universe" required>
+                        <button type="button" class="eye-toggle" id="toggle-password" title="Toggle Password Visibility">
+                            <i class="ph ph-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                <button type="submit" id="login-submit-btn" class="btn btn-primary w-full">Sign In</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MAIN DASHBOARD -->
+    <div id="app-view" class="view hidden">
+        
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="sidebar-top">
+                <div class="brand">
+                    <i class="ph-fill ph-books"></i>
+                    <div>
+                        <h1>BookSpace</h1>
+                        <span>bookspace.fragnel</span>
+                    </div>
+                </div>
+                <nav class="sidebar-menu">
+                    <a href="#" class="menu-item active" data-target="dashboard">
+                        <i class="ph ph-squares-four"></i> Dashboard
+                    </a>
+                    <a href="#" class="menu-item" data-target="rooms">
+                        <i class="ph ph-door-open"></i> Rooms
+                    </a>
+                    <a href="#" class="menu-item" data-target="my-bookings">
+                        <i class="ph ph-calendar-check"></i> My Bookings
+                    </a>
+                    <a href="#" class="menu-item" data-target="absences">
+                        <i class="ph ph-calendar-x"></i> My Absences
+                    </a>
+                    <a href="#" class="menu-item" data-target="settings">
+                        <i class="ph ph-gear"></i> Settings
+                    </a>
+                </nav>
+            </div>
+            <div class="sidebar-bottom">
+                <button id="btn-signout" class="menu-item btn-ghost">
+                    <i class="ph ph-sign-out"></i> Sign Out
+                </button>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="main-content">
+            <header class="top-header">
+                <div>
+                    <h2 id="welcome-name">Welcome, Prof. Makade</h2>
+                    <p class="subtitle">Here’s what’s happening with your bookings today.</p>
+                </div>
+                <div class="user-profile" style="display: flex; align-items: center; gap: 1rem;">
+                    <div class="avatar">VG</div>
+                </div>
+            </header>
+
+            <div class="content-container">
+                
+                <!-- VIEW: DASHBOARD -->
+                <div id="view-dashboard" class="page-view active">
+                    <div class="stats-row">
+                        <div class="stat-card">
+                            <span class="stat-title">Total Rooms</span>
+                            <span class="stat-value" id="stat-total">8</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-title">Available Rooms</span>
+                            <span class="stat-value text-green" id="stat-available">0</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-title">Occupied Rooms</span>
+                            <span class="stat-value text-orange" id="stat-occupied">0</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-title">My Bookings</span>
+                            <span class="stat-value" id="stat-my-bookings">0</span>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-grid">
+                        <div class="recent-bookings-panel card">
+                            <h3 class="panel-title">Recent Bookings</h3>
+                            <div class="recent-list" id="recent-bookings-list">
+                                <!-- Populated by JS -->
+                            </div>
+                        </div>
+                        <div class="quick-stats-panel card">
+                            <h3 class="panel-title">Quick Stats</h3>
+                            <div class="quick-stat-item">
+                                <span>Classrooms Available</span>
+                                <strong id="qs-classrooms">0</strong>
+                            </div>
+                            <div class="quick-stat-item">
+                                <span>Labs Available</span>
+                                <strong id="qs-labs">0</strong>
+                            </div>
+                            <div class="quick-stat-item">
+                                <span>Total Bookings This Week</span>
+                                <strong id="qs-weekly-bookings">0</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW: ROOMS -->
+                <div id="view-rooms" class="page-view hidden">
+                    <div class="page-header flex-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <h3 style="margin: 0;">Rooms</h3>
+                        <div class="filter-group" style="display: flex; gap: 0.5rem; background: var(--bg-light); padding: 0.375rem; border-radius: var(--radius-md);">
+                            <button class="btn filter-btn filter-active" data-filter="All" style="background: var(--bg-white); box-shadow: var(--shadow-sm); color: var(--text-main);">All Rooms</button>
+                            <button class="btn filter-btn filter-inactive" data-filter="Classroom" style="background: transparent; color: var(--text-muted); box-shadow: none;">Classrooms</button>
+                            <button class="btn filter-btn filter-inactive" data-filter="Lab" style="background: transparent; color: var(--text-muted); box-shadow: none;">Labs</button>
+                        </div>
+                    </div>
+                    <div class="rooms-grid" id="rooms-grid">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- VIEW: MY BOOKINGS -->
+                <div id="view-my-bookings" class="page-view hidden">
+                    <div class="card table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Room</th>
+                                    <th>Type</th>
+                                    <th>Day</th>
+                                    <th>Time Slot</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="my-bookings-tbody">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- VIEW: SETTINGS -->
+                <div id="view-settings" class="page-view hidden">
+                    <div class="settings-grid">
+                        
+                        <!-- Faculty Profile Card (Left Column) -->
+                        <div class="card settings-section">
+                            <div class="settings-section-header">
+                                <h3>Faculty Profile</h3>
+                            </div>
+                            <div class="profile-banner">
+                                <div class="profile-avatar-large">VG</div>
+                            </div>
+                            <div class="profile-details-padded">
+                                <div class="profile-field">
+                                    <label>Full Name</label>
+                                    <p id="profile-name">Mr. Vaibhav Godbole</p>
+                                </div>
+                                <div class="profile-field">
+                                    <label>Email</label>
+                                    <p id="profile-email">vaibhav.godbole@fragnel.edu</p>
+                                </div>
+                                <div class="profile-field">
+                                    <label>Department</label>
+                                    <p id="profile-dept">Electronics & Computer Science (ECS)</p>
+                                </div>
+                                <div class="profile-field">
+                                    <label>Role</label>
+                                    <p id="profile-role">Faculty</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Preferences Card (Right Column) -->
+                        <div class="card settings-section">
+                            <div class="settings-section-header">
+                                <h3>Preferences</h3>
+                            </div>
+                            <div class="settings-section-body toggle-list">
+                                <div class="toggle-row">
+                                    <div>
+                                        <strong>Email Notifications</strong>
+                                        <p class="text-xs text-muted">Receive booking updates via email</p>
+                                    </div>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" checked disabled>
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                                <hr class="divider">
+                                <div class="toggle-row">
+                                    <div>
+                                        <strong>Dark Mode</strong>
+                                        <p class="text-xs text-muted">Toggle dark theme</p>
+                                    </div>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="theme-toggle">
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>
+
+                <!-- VIEW: MY ABSENCES -->
+                <div id="view-absences" class="page-view hidden">
+                    <div class="absences-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: start; margin-top: 0;">
+                        <!-- Left Side: Mark Absent Form -->
+                        <div class="card settings-section" style="border: none !important; box-shadow: var(--shadow-lg) !important; background: var(--bg-white) !important; overflow: visible;">
+                            <div class="settings-section-header" style="background: linear-gradient(135deg, var(--primary-blue) 0%, #8b5cf6 100%); color: white; padding: 2rem; border-radius: var(--radius-xl) var(--radius-xl) 0 0; border: none;">
+                                <h3 style="color: white; font-size: 1.25rem; font-weight: 600; margin: 0; display: flex; align-items: center; gap: 0.75rem;"><i class="ph-fill ph-calendar-plus" style="font-size: 1.5rem;"></i> Schedule an Absence</h3>
+                            </div>
+                            <div class="settings-section-body profile-details" style="padding: 2.5rem;">
+                                <p class="text-muted" style="margin-bottom: 2rem; font-size: 1rem; line-height: 1.6;">Select a day to mark yourself absent. Your default timetable slots for that day will immediately open for others to book.</p>
+                                <div class="form-group" style="margin-bottom: 2rem;">
+                                    <label for="absence-day" style="font-weight: 600; margin-bottom: 0.75rem; display: block; font-size: 0.95rem; color: var(--text-main);">Select Day of Week</label>
+                                    <select id="absence-day" class="form-select" style="font-size: 1rem; padding: 1rem 3rem 1rem 1.25rem; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+                                        <option value="Monday">Monday</option>
+                                        <option value="Tuesday">Tuesday</option>
+                                        <option value="Wednesday">Wednesday</option>
+                                        <option value="Thursday">Thursday</option>
+                                        <option value="Friday">Friday</option>
+                                    </select>
+                                </div>
+                                <button id="btn-mark-absent" class="btn btn-primary w-full" style="padding: 1.1rem; font-size: 1.05rem; font-weight: 600; border-radius: var(--radius-lg); box-shadow: 0 10px 25px rgba(99, 102, 241, 0.4); transition: transform 0.2s, box-shadow 0.2s;">Confirm Absence</button>
+                            </div>
+                        </div>
+
+                        <!-- Right Side: List of Absences -->
+                        <div class="card settings-section" style="background: var(--bg-surface); border: 1px solid var(--border-color); box-shadow: none;">
+                            <div class="settings-section-body" style="padding: 2.5rem;">
+                                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-color);">
+                                    <h4 style="font-size: 1.15rem; margin: 0; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; color: var(--text-main);"><i class="ph-fill ph-list-dashes" style="color: var(--primary-blue);"></i> Scheduled Absences</h4>
+                                    <span style="font-size: 0.75rem; background: var(--primary-blue-light); color: var(--primary-blue); padding: 0.35rem 0.85rem; border-radius: var(--radius-full); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">Active</span>
+                                </div>
+                                
+                                <ul id="absence-list" style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 1rem;">
+                                    <!-- Populated by JS -->
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- SCHEDULE MODAL EXPLICIT TABLE -->
+    <div id="modal-schedule" class="modal-overlay hidden">
+        <div class="modal-content table-modal">
+            <button class="modal-close" aria-label="Close modal">&times;</button>
+            <div class="modal-header">
+                <h2 id="schedule-modal-title">Room 303 – Weekly Schedule</h2>
+                <p class="subtitle" id="schedule-modal-subtitle">Classroom • Lecture Slots (1 hr)</p>
+            </div>
+            <div class="modal-body scrollable">
+                <table class="schedule-table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Monday</th>
+                            <th>Tuesday</th>
+                            <th>Wednesday</th>
+                            <th>Thursday</th>
+                            <th>Friday</th>
+                        </tr>
+                    </thead>
+                    <tbody id="schedule-tbody">
+                        <!-- Strict rows rendered by JS, incorporating exact breakdown -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECONDARY CONFIRMATION MODAL -->
+    <div id="modal-confirm" class="modal-overlay hidden modal-secondary">
+        <div class="modal-content confirm-modal">
+            <div class="modal-header">
+                <h2>Confirm Booking</h2>
+            </div>
+            <div class="modal-body">
+                <div class="confirm-details">
+                    <div class="detail-row"><span>Room:</span> <strong id="confirm-room">303</strong></div>
+                    <div class="detail-row"><span>Faculty:</span> <strong id="confirm-faculty">Dr. Swapnali Makade</strong></div>
+                    <div class="detail-row"><span>Day:</span> <strong id="confirm-day">Wednesday</strong></div>
+                    <div class="detail-row"><span>Time:</span> <strong id="confirm-time">11:00–12:00</strong></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" id="btn-cancel-confirm">Cancel</button>
+                <button class="btn btn-primary" id="btn-submit-confirm">Confirm Booking</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert / Toast notification -->
+    <div id="toast-container"></div>
+
+    <!-- AI CHATBOT UI -->
+    <button id="floating-chat-btn" class="chat-btn">
+        <i class="ph-fill ph-chat-teardrop-dots"></i>
+    </button>
+
+    <div id="chat-window" class="chat-window hidden">
+        <div class="chat-header">
+            <div class="chat-header-info">
+                <i class="ph-fill ph-robot"></i>
+                <div>
+                    <h4>BookSpace Assistant</h4>
+                    <span class="status-dot"></span><small>Online</small>
+                </div>
+            </div>
+            <button id="close-chat-btn" class="modal-close"><i class="ph ph-x"></i></button>
+        </div>
+        <div id="chat-messages" class="chat-messages">
+            <div class="chat-message bot">
+                <div class="msg-content">Hello! I'm your BookSpace Assistant. I can help you check room availability and make bookings. What do you need?</div>
+            </div>
+        </div>
+        <form id="chat-form" class="chat-input-area">
+            <input type="text" id="chat-input" placeholder="Type your message..." autocomplete="off">
+            <button type="submit" id="chat-submit-btn"><i class="ph-fill ph-paper-plane-right"></i></button>
+        </form>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
