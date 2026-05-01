@@ -12,15 +12,13 @@ app.use(cors());
 app.use(express.json());
 
 const path = require('path');
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'ejs');
 
 // Serve static files (CSS, Client-side JS, etc.)
 app.use(express.static(__dirname));
 
 // Route for the main application (removes .html from URL)
 app.get('/', (req, res) => {
-    res.json({ message: "BookSpace API is live!" });
+    res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // Initialize Supabase backend
