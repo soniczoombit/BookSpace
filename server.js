@@ -24,12 +24,26 @@ app.get('/', (req, res) => {
 // Initialize Supabase backend
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
+let supabase;
+if (supabaseUrl && supabaseKey) {
+    try {
+        supabase = createClient(supabaseUrl, supabaseKey);
+    } catch (e) {
+        console.error("Supabase creation error", e);
+    }
+}
 
-const openai = new OpenAI({ 
-    apiKey: process.env.GEMINI_API_KEY,
-    baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/"
-});
+let openai;
+if (process.env.GEMINI_API_KEY) {
+    try {
+        openai = new OpenAI({ 
+            apiKey: process.env.GEMINI_API_KEY,
+            baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/"
+        });
+    } catch (e) {
+        console.error("OpenAI creation error", e);
+    }
+}
 
 // Mock Database for Users (For Presentation)
 const usersDb = [
@@ -104,9 +118,15 @@ app.get('/api/health', (req, res) => {
     res.json({ status: "Server is connected to Supabase." });
 });
 
+let localBookings = [];
+let localAbsences = [];
+
 // Get all bookings
 app.get('/api/bookings', async (req, res) => {
     try {
+        if (!supabase) {
+            return res.json(localBookings);
+        }
         const { data, error } = await supabase.from('bookings').select('*');
         if (error) throw error;
         res.json(data);
@@ -121,6 +141,12 @@ app.post('/api/bookings', async (req, res) => {
         const newBooking = req.body;
         delete newBooking.id; // Let Supabase generate a proper UUID
         
+        if (!supabase) {
+            newBooking.id = Date.now().toString();
+            localBookings.push(newBooking);
+            return res.status(201).json({ message: "Booking saved", booking: newBooking });
+        }
+
         const { data, error } = await supabase
             .from('bookings')
             .insert([newBooking])
@@ -136,6 +162,11 @@ app.post('/api/bookings', async (req, res) => {
 // Delete a booking
 app.delete('/api/bookings/:id', async (req, res) => {
     try {
+        if (!supabase) {
+            localBookings = localBookings.filter(b => b.id !== req.params.id);
+            return res.json({ message: "Booking removed successfully" });
+        }
+
         const { error } = await supabase
             .from('bookings')
             .delete()
@@ -151,6 +182,9 @@ app.delete('/api/bookings/:id', async (req, res) => {
 // Get all absences
 app.get('/api/absences', async (req, res) => {
     try {
+        if (!supabase) {
+            return res.json(localAbsences);
+        }
         const { data, error } = await supabase.from('absences').select('*');
         if (error) throw error;
         res.json(data);
@@ -164,6 +198,12 @@ app.post('/api/absences', async (req, res) => {
     try {
         const newAbsence = req.body;
         delete newAbsence.id; // Let Supabase generate a proper UUID
+
+        if (!supabase) {
+            newAbsence.id = Date.now().toString();
+            localAbsences.push(newAbsence);
+            return res.status(201).json({ message: "Absence saved", absence: newAbsence });
+        }
 
         const { data, error } = await supabase
             .from('absences')
@@ -180,6 +220,11 @@ app.post('/api/absences', async (req, res) => {
 // Delete an absence
 app.delete('/api/absences/:id', async (req, res) => {
     try {
+        if (!supabase) {
+            localAbsences = localAbsences.filter(a => a.id !== req.params.id);
+            return res.json({ message: "Absence removed successfully" });
+        }
+
         const { error } = await supabase
             .from('absences')
             .delete()
