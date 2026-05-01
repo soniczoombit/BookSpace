@@ -390,40 +390,34 @@ If the user is logged in:
         
         if (responseMessage.tool_calls) {
             let clientActions = [];
-            let toolResults = [];
 
             for (const toolCall of responseMessage.tool_calls) {
                 const args = JSON.parse(toolCall.function.arguments);
                 const fnName = toolCall.function.name;
 
                 if (fnName === 'book_room') {
-                    // Send action to client instead of booking directly here so modal can open
                     clientActions.push({ action: 'bookSlot', data: args });
-                    toolResults.push({ role: "tool", tool_call_id: toolCall.id, content: JSON.stringify({ success: true, message: "Opened booking modal" }) });
                 } else if (fnName === 'cancel_booking') {
                     clientActions.push({ action: 'cancelBooking', data: { id: args.booking_id } });
-                    toolResults.push({ role: "tool", tool_call_id: toolCall.id, content: JSON.stringify({ success: true, message: "Triggered cancellation" }) });
                 } else if (fnName === 'navigateTo') {
                     clientActions.push({ action: 'navigateTo', data: { page: args.page } });
-                    toolResults.push({ role: "tool", tool_call_id: toolCall.id, content: JSON.stringify({ success: true, message: "Navigated to page" }) });
                 } else if (fnName === 'filterRooms') {
                     clientActions.push({ action: 'filterRooms', data: { type: args.type } });
-                    toolResults.push({ role: "tool", tool_call_id: toolCall.id, content: JSON.stringify({ success: true, message: "Filtered rooms" }) });
                 } else if (fnName === 'openSchedule') {
                     clientActions.push({ action: 'openSchedule', data: { roomId: args.roomId } });
-                    toolResults.push({ role: "tool", tool_call_id: toolCall.id, content: JSON.stringify({ success: true, message: "Opened schedule modal" }) });
                 } else if (fnName === 'navigate_to_absences') {
                     clientActions.push({ action: 'navigateTo', data: { page: 'absences' } });
-                    toolResults.push({ role: "tool", tool_call_id: toolCall.id, content: JSON.stringify({ success: true, message: "Navigated to absences page" }) });
                 }
             }
             
-            payload.messages.push(responseMessage);
-            payload.messages.push(...toolResults);
-
-            const finalResponse = await openai.chat.completions.create(payload);
-            
-            res.json({ reply: finalResponse.choices[0].message, hasMutation: false, clientActions: clientActions });
+            res.json({
+                reply: {
+                    role: "assistant",
+                    content: responseMessage.content || "I have initiated that action for you."
+                },
+                hasMutation: false,
+                clientActions: clientActions
+            });
         } else {
             res.json({ reply: responseMessage, hasMutation: false });
         }
