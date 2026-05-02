@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { OpenAI } = require('openai');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { createClient } = require('@supabase/supabase-js');
 const nodemailer = require('nodemailer');
 const app = express();
@@ -279,7 +280,8 @@ app.delete('/api/absences/:id', async (req, res) => {
 // Chatbot endpoint
 app.post('/api/chat', async (req, res) => {
     try {
-        if (!openai) {
+        const apiKey = process.env.GEMINI_API_KEY;
+        if (!apiKey) {
             return res.json({
                 reply: {
                     role: "assistant",
@@ -290,7 +292,6 @@ app.post('/api/chat', async (req, res) => {
         }
 
         const { messages, userContext } = req.body;
-        
         const isLoggedIn = userContext.isLoggedIn;
 
         let systemPrompt = `You are the BookSpace AI Assistant. You help faculty manage room bookings.
@@ -324,114 +325,87 @@ If the user is logged in:
 - Pages available: "dashboard", "rooms", "my-bookings", "absences", "settings".
 - Be conversational and highly concise.`;
 
-        let tools = [];
+        const googleMessages = messages.map(m => ({
+            role: m.role === "assistant" ? "model" : "user",
+            parts: [{ text: m.content }]
+        }));
 
+        let genTools = [];
         if (isLoggedIn) {
-            tools = [
-                {
-                    type: "function",
-                    function: {
+            genTools = [{
+                functionDeclarations: [
+                    {
                         name: "book_room",
                         description: "Open the booking modal with prefilled data for a room, day, and time.",
                         parameters: {
-                            type: "object",
+                            type: "OBJECT",
                             properties: {
-                                room: { type: "string" },
-                                day: { type: "string" },
-                                time: { type: "string", description: "e.g., 10:45-11:00" },
+                                room: { type: "STRING" },
+                                day: { type: "STRING" },
+                                time: { type: "STRING" },
                             },
                             required: ["room", "day", "time"],
                         },
                     },
-                },
-                {
-                    type: "function",
-                    function: {
+                    {
                         name: "cancel_booking",
                         description: "Trigger cancel logic for a booking ID.",
                         parameters: {
-                            type: "object",
+                            type: "OBJECT",
                             properties: {
-                                booking_id: { type: "string", description: "The UUID of the booking" }
+                                booking_id: { type: "STRING" }
                             },
                             required: ["booking_id"],
                         },
                     },
-                },
-                {
-                    type: "function",
-                    function: {
+                    {
                         name: "navigateTo",
                         description: "Automatically navigate to a specific section/page.",
                         parameters: {
-                            type: "object",
+                            type: "OBJECT",
                             properties: {
-                                page: { type: "string", enum: ["dashboard", "rooms", "my-bookings", "settings", "absences"], description: "The page to navigate to" }
+                                page: { type: "STRING" }
                             },
                             required: ["page"],
                         },
                     },
-                },
-                {
-                    type: "function",
-                    function: {
+                    {
                         name: "filterRooms",
                         description: "Filter rooms to show only a specific type.",
                         parameters: {
-                            type: "object",
+                            type: "OBJECT",
                             properties: {
-                                type: { type: "string", enum: ["All", "Classroom", "Lab"], description: "The type of rooms to filter by" }
+                                type: { type: "STRING" }
                             },
                             required: ["type"],
                         },
-                    },
-                },
-                {
-                    type: "function",
-                    function: {
-                        name: "openSchedule",
-                        description: "Open the weekly schedule modal for a specific room.",
-                        parameters: {
-                            type: "object",
-                            properties: {
-                                roomId: { type: "string", description: "The room ID to view schedule for" }
-                            },
-                            required: ["roomId"],
-                        },
-                    },
-                },
-                {
-                    type: "function",
-                    function: {
-                        name: "navigate_to_absences",
-                        description: "Navigate to the My Absences page where the user can mark themselves absent.",
-                        parameters: {
-                            type: "object",
-                            properties: {},
-                        },
-                    },
-                }
-            ];
+                    }
+                ]
+            }];
         }
 
-        const payload = {
-            model: "gemini-1.5-flash",
-            messages: [{ role: "system", content: systemPrompt }, ...messages]
-        };
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const modelWithTools = genAI.getGenerativeModel({
+            model: "gemini-1.5-flash-latest",
+            tools: genTools
+        }, { apiVersion: 'v1beta' });
 
-        if (tools.length > 0) {
-            payload.tools = tools;
-        }
+        const lastMessage = googleMessages.pop();
+        const chat = modelWithTools.startChat({
+            history: googleMessages,
+            systemInstruction: systemPrompt
+        });
 
-        const response = await openai.chat.completions.create(payload);
-        const responseMessage = response.choices[0].message;
-        
-        if (responseMessage.tool_calls) {
+        const result = await chat.sendMessage(lastMessage.parts[0].text);
+        const response = await result.response;
+        const text = response.text();
+        const calls = result.response.functionCalls();
+
+        if (calls && calls.length > 0) {
             let clientActions = [];
-
-            for (const toolCall of responseMessage.tool_calls) {
-                const args = JSON.parse(toolCall.function.arguments);
-                const fnName = toolCall.function.name;
+            for (const call of calls) {
+                const fnName = call.name;
+                const args = call.args;
 
                 if (fnName === 'book_room') {
                     clientActions.push({ action: 'bookSlot', data: args });
@@ -441,23 +415,25 @@ If the user is logged in:
                     clientActions.push({ action: 'navigateTo', data: { page: args.page } });
                 } else if (fnName === 'filterRooms') {
                     clientActions.push({ action: 'filterRooms', data: { type: args.type } });
-                } else if (fnName === 'openSchedule') {
-                    clientActions.push({ action: 'openSchedule', data: { roomId: args.roomId } });
-                } else if (fnName === 'navigate_to_absences') {
-                    clientActions.push({ action: 'navigateTo', data: { page: 'absences' } });
                 }
             }
-            
+
             res.json({
                 reply: {
                     role: "assistant",
-                    content: responseMessage.content || "I have initiated that action for you."
+                    content: text || "I have initiated that action for you."
                 },
                 hasMutation: false,
                 clientActions: clientActions
             });
         } else {
-            res.json({ reply: responseMessage, hasMutation: false });
+            res.json({
+                reply: {
+                    role: "assistant",
+                    content: text
+                },
+                hasMutation: false
+            });
         }
     } catch (err) {
         console.error(err);
