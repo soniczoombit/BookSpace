@@ -392,9 +392,9 @@ If the user is logged in:
 
         try {
             const modelWithTools = genAI.getGenerativeModel({
-                model: "gemini-1.5-flash-latest",
+                model: "gemini-1.5-pro",
                 tools: genTools
-            });
+            }, { apiVersion: "v1" });
             const chat = modelWithTools.startChat({
                 history: googleMessages,
                 systemInstruction: {
@@ -407,25 +407,12 @@ If the user is logged in:
             text = response.text();
             calls = result.response.functionCalls();
         } catch (err) {
-            console.error("First model failed, trying gemini-pro...", err);
+            console.error("First model failed, trying gemini-1.5-flash...", err);
             try {
-                const modelPro = genAI.getGenerativeModel({
-                    model: "gemini-pro"
-                });
-                const chatPro = modelPro.startChat({
-                    history: googleMessages,
-                    systemInstruction: {
-                        parts: [{ text: systemPrompt }]
-                    }
-                });
-                const resultPro = await chatPro.sendMessage(lastMessage.parts[0].text);
-                const responsePro = await resultPro.response;
-                text = responsePro.text();
-            } catch (err2) {
-                console.error("Second model failed, trying gemini-1.5-flash...", err2);
                 const modelFlash = genAI.getGenerativeModel({
-                    model: "gemini-1.5-flash"
-                });
+                    model: "gemini-1.5-flash",
+                    tools: genTools
+                }, { apiVersion: "v1" });
                 const chatFlash = modelFlash.startChat({
                     history: googleMessages,
                     systemInstruction: {
@@ -435,6 +422,21 @@ If the user is logged in:
                 const resultFlash = await chatFlash.sendMessage(lastMessage.parts[0].text);
                 const responseFlash = await resultFlash.response;
                 text = responseFlash.text();
+                calls = resultFlash.response.functionCalls();
+            } catch (err2) {
+                console.error("Second model failed, trying gemini-pro...", err2);
+                const modelPro = genAI.getGenerativeModel({
+                    model: "gemini-pro"
+                }, { apiVersion: "v1" });
+                const chatPro = modelPro.startChat({
+                    history: googleMessages,
+                    systemInstruction: {
+                        parts: [{ text: systemPrompt }]
+                    }
+                });
+                const resultPro = await chatPro.sendMessage(lastMessage.parts[0].text);
+                const responsePro = await resultPro.response;
+                text = responsePro.text();
             }
         }
 
