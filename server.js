@@ -342,7 +342,7 @@ app.post('/api/send-reminder', async (req, res) => {
         }
 
         let transporter = nodemailer.createTransport({
-            service: 'gmail', // You can change this if not using gmail
+            service: 'gmail',
             auth: {
                 user: emailUser,
                 pass: emailPass
@@ -363,13 +363,3 @@ app.post('/api/send-reminder', async (req, res) => {
         res.status(500).json({ error: "Failed to send email: " + error.message });
     }
 });
-
-// Start server
-if (process.env.NODE_ENV !== 'test') {
-    app.listen(PORT, () => {
-        console.log(`Backend server running at http://localhost:${PORT}`);
-        console.log(`Note: Connected directly to Supabase Postgres Cloud Database!`);
-    });
-}
-
-module.exports = app;
