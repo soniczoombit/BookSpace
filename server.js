@@ -58,22 +58,60 @@ let disabledRooms = [];
  * API ROUTES
  */
 
-app.get('/api/disabled-rooms', (req, res) => {
-    res.json(disabledRooms);
-});
-
-app.post('/api/disable-room', (req, res) => {
-    const { room } = req.body;
-    if (room && !disabledRooms.includes(room)) {
-        disabledRooms.push(room);
+app.get('/api/disabled-rooms', async (req, res) => {
+    try {
+        if (!supabase) {
+            return res.json(disabledRooms);
+        }
+        const { data, error } = await supabase
+            .from('bookings')
+            .select('*')
+            .eq('room', 'DISABLED_ROOM');
+        
+        if (error) throw error;
+        const disabled = data.map(b => b.day);
+        res.json(disabled);
+    } catch (err) {
+        res.json(disabledRooms);
     }
-    res.json({ success: true, disabledRooms });
 });
 
-app.post('/api/enable-room', (req, res) => {
+app.post('/api/disable-room', async (req, res) => {
     const { room } = req.body;
-    disabledRooms = disabledRooms.filter(r => r !== room);
-    res.json({ success: true, disabledRooms });
+    try {
+        if (room && !disabledRooms.includes(room)) {
+            disabledRooms.push(room);
+        }
+        if (supabase && room) {
+            await supabase.from('bookings').insert([{
+                room: 'DISABLED_ROOM',
+                day: room,
+                time: 'ALL',
+                user_email: 'swapnali.makdey@fragnel.edu',
+                user_name: 'Admin'
+            }]);
+        }
+        res.json({ success: true, disabledRooms });
+    } catch (err) {
+        res.json({ success: true, disabledRooms });
+    }
+});
+
+app.post('/api/enable-room', async (req, res) => {
+    const { room } = req.body;
+    try {
+        disabledRooms = disabledRooms.filter(r => r !== room);
+        if (supabase && room) {
+            await supabase
+                .from('bookings')
+                .delete()
+                .eq('room', 'DISABLED_ROOM')
+                .eq('day', room);
+        }
+        res.json({ success: true, disabledRooms });
+    } catch (err) {
+        res.json({ success: true, disabledRooms });
+    }
 });
 
 // Login Route
@@ -125,11 +163,11 @@ let localAbsences = [];
 app.get('/api/bookings', async (req, res) => {
     try {
         if (!supabase) {
-            return res.json(localBookings);
+            return res.json(localBookings.filter(b => b.room !== 'DISABLED_ROOM'));
         }
         const { data, error } = await supabase.from('bookings').select('*');
         if (error) throw error;
-        res.json(data);
+        res.json(data.filter(b => b.room !== 'DISABLED_ROOM'));
     } catch (err) {
         res.status(500).json({ error: "Failed to fetch bookings" });
     }
