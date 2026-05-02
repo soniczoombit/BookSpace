@@ -386,14 +386,16 @@ If the user is logged in:
 
         const genAI = new GoogleGenerativeAI(apiKey);
         const modelWithTools = genAI.getGenerativeModel({
-            model: "gemini-1.5-flash-latest",
+            model: "gemini-1.5-flash",
             tools: genTools
-        }, { apiVersion: 'v1beta' });
+        });
 
         const lastMessage = googleMessages.pop();
         const chat = modelWithTools.startChat({
             history: googleMessages,
-            systemInstruction: systemPrompt
+            systemInstruction: {
+                parts: [{ text: systemPrompt }]
+            }
         });
 
         const result = await chat.sendMessage(lastMessage.parts[0].text);
