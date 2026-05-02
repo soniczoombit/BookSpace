@@ -280,7 +280,7 @@ app.delete('/api/absences/:id', async (req, res) => {
 // Chatbot endpoint
 app.post('/api/chat', async (req, res) => {
     try {
-        const apiKey = process.env.GEMINI_API_KEY;
+        const apiKey = process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.trim().replace(/^["']|["']$/g, '') : null;
         if (!apiKey) {
             return res.json({
                 reply: {
@@ -385,10 +385,18 @@ If the user is logged in:
         }
 
         const genAI = new GoogleGenerativeAI(apiKey);
-        const modelWithTools = genAI.getGenerativeModel({
-            model: "gemini-1.5-flash-latest",
-            tools: genTools
-        });
+        let modelWithTools;
+        try {
+            modelWithTools = genAI.getGenerativeModel({
+                model: "gemini-1.5-flash-latest",
+                tools: genTools
+            });
+        } catch (err) {
+            modelWithTools = genAI.getGenerativeModel({
+                model: "gemini-pro",
+                tools: genTools
+            });
+        }
 
         const lastMessage = googleMessages.pop();
         const chat = modelWithTools.startChat({
