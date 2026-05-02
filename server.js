@@ -461,7 +461,13 @@ If the user is logged in:
         }
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Chat processing failed" });
+        res.status(200).json({
+            reply: {
+                role: "assistant",
+                content: `Chat Error: ${err.message || err.toString()}`
+            },
+            hasMutation: false
+        });
     }
 });
 // Email Reminder Endpoint
