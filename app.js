@@ -227,96 +227,83 @@ const API_BASE = window.location.origin.includes("localhost")
     ? "http://localhost:3000/api" 
     : `${window.location.origin}/api`;
 
+const supabaseUrl = 'https://didtzphbacvdmubhxfsp.supabase.co';
+const supabaseKey = 'sb_publishable_jz5yrYmkBOfx1IHhVMNORw_Zx6Hm981';
+const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
 async function fetchBookings() {
     try {
-        const res = await fetch(`${API_BASE}/bookings`);
-        if (!res.ok) throw new Error("Offline");
-        state.bookings = await res.json();
+        const { data, error } = await supabase.from('bookings').select('*');
+        if (error) throw error;
+        state.bookings = data || [];
         return true;
     } catch (e) {
-        const localData = localStorage.getItem("bookspace_bookings");
-        if (localData) {
-            state.bookings = JSON.parse(localData);
-        } else {
-            state.bookings = [...FALLBACK_BOOKINGS];
-            localStorage.setItem("bookspace_bookings", JSON.stringify(state.bookings));
-        }
+        console.error("Error fetching bookings", e);
         return false;
     }
 }
 
 let disabledRooms = [];
-try {
-    const localDisabled = localStorage.getItem("bookspace_disabled_rooms");
-    if (localDisabled) {
-        disabledRooms = JSON.parse(localDisabled);
-    }
-} catch (e) {
-    console.error(e);
-}
 
 async function fetchDisabledRooms() {
     try {
-        const res = await fetch(`${API_BASE}/disabled-rooms`);
-        if (res.ok) {
-            disabledRooms = await res.json();
-            localStorage.setItem("bookspace_disabled_rooms", JSON.stringify(disabledRooms));
-        }
+        const { data, error } = await supabase.from('disabled_rooms').select('room_id');
+        if (error) throw error;
+        disabledRooms = data.map(d => d.room_id);
     } catch (e) {
-        console.error("Offline fetching disabled rooms", e);
+        console.error("Error fetching disabled rooms", e);
     }
 }
 
 async function apiAddBooking(booking) {
     try {
-        const res = await fetch(`${API_BASE}/bookings`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(booking)
-        });
-        if (res.ok) {
-            const data = await res.json();
-            return data.booking;
-        }
-        return false;
-    } catch (e) { return false; }
+        const { data, error } = await supabase.from('bookings').insert([{
+            room: booking.room,
+            faculty: booking.faculty,
+            day: booking.day,
+            time: booking.time
+        }]).select();
+        if (error) throw error;
+        return data[0];
+    } catch (e) { 
+        console.error("Add booking error:", e);
+        return false; 
+    }
 }
 
 async function apiDeleteBooking(id) {
     try {
-        const res = await fetch(`${API_BASE}/bookings/${id}`, { method: 'DELETE' });
-        return res.ok;
+        const { error } = await supabase.from('bookings').delete().eq('id', id);
+        if (error) throw error;
+        return true;
     } catch (e) { return false; }
 }
 
 async function fetchAbsences() {
     try {
-        const res = await fetch(`${API_BASE}/absences`);
-        if (!res.ok) throw new Error("Offline");
-        state.absences = await res.json();
+        const { data, error } = await supabase.from('absences').select('*');
+        if (error) throw error;
+        state.absences = data || [];
         return true;
     } catch (e) { return false; }
 }
 
 async function apiAddAbsence(absence) {
     try {
-        const res = await fetch(`${API_BASE}/absences`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(absence)
-        });
-        if (res.ok) {
-            const data = await res.json();
-            return data.absence;
-        }
-        return false;
+        const { data, error } = await supabase.from('absences').insert([{
+            faculty: absence.faculty,
+            day: absence.day
+        }]).select();
+        if (error) throw error;
+        return data[0];
     } catch (e) { return false; }
 }
 
 async function apiDeleteAbsence(id) {
     try {
-        const res = await fetch(`${API_BASE}/absences/${id}`, { method: 'DELETE' });
-        return res.ok;
+        const { error } = await supabase.from('absences').delete().eq('id', id);
+        if (error) throw error;
+        return true;
     } catch (e) { return false; }
 }
 
