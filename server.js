@@ -332,8 +332,11 @@ app.post('/api/send-reminder', async (req, res) => {
     try {
         const { toEmail, subject, body } = req.body;
         
+        const emailUser = process.env.EMAIL_USER ? process.env.EMAIL_USER.trim().replace(/^["']|["']$/g, '') : null;
+        const emailPass = process.env.EMAIL_PASS ? process.env.EMAIL_PASS.trim().replace(/^["']|["']$/g, '') : null;
+
         // If credentials are not set, don't crash
-        if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS || process.env.EMAIL_USER === 'your_email@gmail.com') {
+        if (!emailUser || !emailPass || emailUser === 'your_email@gmail.com') {
             console.log("Email credentials not configured. Skipping actual send.");
             return res.json({ success: true, message: "Simulated email send (credentials missing)" });
         }
@@ -341,13 +344,13 @@ app.post('/api/send-reminder', async (req, res) => {
         let transporter = nodemailer.createTransport({
             service: 'gmail', // You can change this if not using gmail
             auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS
+                user: emailUser,
+                pass: emailPass
             }
         });
 
         let info = await transporter.sendMail({
-            from: `"BookSpace Assistant" <${process.env.EMAIL_USER}>`,
+            from: `"BookSpace Assistant" <${emailUser}>`,
             to: toEmail,
             subject: subject,
             text: body,
@@ -357,7 +360,7 @@ app.post('/api/send-reminder', async (req, res) => {
         res.json({ success: true, messageId: info.messageId });
     } catch (error) {
         console.error("Error sending email:", error);
-        res.status(500).json({ error: "Failed to send email" });
+        res.status(500).json({ error: "Failed to send email: " + error.message });
     }
 });
 
