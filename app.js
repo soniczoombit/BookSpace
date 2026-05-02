@@ -729,30 +729,28 @@ function renderRooms() {
             const isDisabled = disabledRooms.includes(roomId);
             const endpoint = isDisabled ? "enable-room" : "disable-room";
             
-            // Client side update immediately!
+            // Client side update immediately for fast UI!
             if (isDisabled) {
                 disabledRooms = disabledRooms.filter(r => r !== roomId);
             } else {
                 disabledRooms.push(roomId);
             }
-            localStorage.setItem("bookspace_disabled_rooms", JSON.stringify(disabledRooms));
             showToast(`Room ${roomId} successfully ${isDisabled ? 'enabled' : 'disabled'}!`);
             renderRooms();
 
             try {
-                const res = await fetch(`${API_BASE}/${endpoint}`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ room: roomId })
-                });
-                const data = await res.json();
-                if (data.success) {
-                    disabledRooms = data.disabledRooms;
-                    localStorage.setItem("bookspace_disabled_rooms", JSON.stringify(disabledRooms));
-                    renderRooms();
+                if (isDisabled) {
+                    // Enable the room by deleting it from Supabase
+                    const { error } = await supabase.from('disabled_rooms').delete().eq('room_id', roomId);
+                    if (error) throw error;
+                } else {
+                    // Disable the room by inserting it into Supabase
+                    const { error } = await supabase.from('disabled_rooms').insert([{ room_id: roomId }]);
+                    if (error) throw error;
                 }
             } catch (err) {
-                console.error("Backend fetch error for disable room:", err);
+                console.error("Supabase error for disable room:", err);
+                showToast("Failed to sync room status with database", "error");
             }
         });
     });
